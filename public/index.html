@@ -22,20 +22,29 @@
             height: 300px;
             width: 100%;
             max-width: 600px;
-            margin: 0 auto;
+            margin: 20px auto;
+        }
+
+        #locationButton {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
         }
     </style>
 </head>
 
 <body>
     <h1>Location Tracker</h1>
-    <div id="status">Requesting location permission...</div>
+    <div id="status">Click the button to start tracking your location</div>
+    <button id="locationButton">Start Location Tracking</button>
     <div id="map"></div>
 
     <script>
         const userId = uuid.v4();
         let ws;
         let watchId;
+        const statusDiv = document.getElementById('status');
+        const locationButton = document.getElementById('locationButton');
 
         function initWebSocket() {
             ws = new WebSocket(`ws://${location.host}`);
@@ -49,7 +58,7 @@
 
         function sendLocation(position) {
             const { latitude, longitude } = position.coords;
-            document.getElementById('status').textContent = `Location: ${latitude}, ${longitude}`;
+            statusDiv.textContent = `Location: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({ type: 'location', userId, latitude, longitude }));
             }
@@ -57,8 +66,23 @@
         }
 
         function handleError(error) {
-            console.error('Error:', error);
-            document.getElementById('status').textContent = `Error: ${error.message}`;
+            console.error('Geolocation error:', error);
+            switch (error.code) {
+                case error.PERMISSION_DENIED:
+                    statusDiv.textContent = "Location permission denied. Please enable location services and reload the page.";
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    statusDiv.textContent = "Location information is unavailable.";
+                    break;
+                case error.TIMEOUT:
+                    statusDiv.textContent = "The request to get location timed out.";
+                    break;
+                default:
+                    statusDiv.textContent = "An unknown error occurred while getting location.";
+                    break;
+            }
+            locationButton.textContent = "Retry Location Tracking";
+            locationButton.disabled = false;
         }
 
         function updateMap(lat, lng) {
@@ -66,17 +90,34 @@
             mapDiv.innerHTML = `<img src="https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=13&size=600x300&maptype=roadmap&markers=color:red%7C${lat},${lng}&key=AIzaSyAOAdBvliNx-HbE8Ta3L0C6SPj7ehvn-JU" alt="Map">`;
         }
 
-        initWebSocket();
-
-        if ("geolocation" in navigator) {
-            watchId = navigator.geolocation.watchPosition(sendLocation, handleError, {
-                enableHighAccuracy: true,
-                timeout: 5000,
-                maximumAge: 0
-            });
-        } else {
-            document.getElementById('status').textContent = "Geolocation is not supported by this browser.";
+        function startLocationTracking() {
+            if ("geolocation" in navigator) {
+                statusDiv.textContent = "Requesting location permission...";
+                locationButton.disabled = true;
+                watchId = navigator.geolocation.watchPosition(sendLocation, handleError, {
+                    enableHighAccuracy: true,
+                    timeout: 5000,
+                    maximumAge: 0
+                });
+                locationButton.textContent = "Stop Location Tracking";
+                locationButton.onclick = stopLocationTracking;
+            } else {
+                statusDiv.textContent = "Geolocation is not supported by this browser.";
+            }
         }
+
+        function stopLocationTracking() {
+            if (watchId !== undefined) {
+                navigator.geolocation.clearWatch(watchId);
+                watchId = undefined;
+            }
+            statusDiv.textContent = "Location tracking stopped";
+            locationButton.textContent = "Start Location Tracking";
+            locationButton.onclick = startLocationTracking;
+        }
+
+        initWebSocket();
+        locationButton.onclick = startLocationTracking;
 
         window.addEventListener('beforeunload', () => {
             if (watchId !== undefined) {

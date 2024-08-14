@@ -38,7 +38,7 @@ wss.on("connection", (ws, req) => {
       const data = JSON.parse(message);
       if (data.type === "application") {
         console.log(
-          `Received application from ${data.userId} for ${data.jobTitle}: Latitude ${data.latitude}, Longitude ${data.longitude}`
+          `Received application from ${data.name} for ${data.jobTitle}`
         );
         // Broadcast the application to all connected admin clients
         adminClients.forEach((client) => {

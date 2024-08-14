@@ -35,6 +35,7 @@
                 <div class="bg-white rounded-lg shadow p-6 mb-6">
                     <h3 class="text-xl font-semibold mb-4">Application Map</h3>
                     <div id="map" class="h-96 w-full"></div>
+                    <div id="mapLegend" class="mt-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2"></div>
                 </div>
 
                 <div class="bg-white rounded-lg shadow p-6">
@@ -48,6 +49,8 @@
     <script>
         let map;
         let markers = {};
+        const colors = ['red', 'blue', 'green', 'purple', 'orange', 'yellow', 'pink', 'cyan', 'magenta', 'lime'];
+        let colorIndex = 0;
 
         function initMap() {
             map = L.map('map').setView([0, 0], 2);
@@ -56,31 +59,78 @@
             }).addTo(map);
         }
 
-        function addApplication(userId, jobTitle, latitude, longitude) {
+        function getMarkerColor() {
+            const color = colors[colorIndex];
+            colorIndex = (colorIndex + 1) % colors.length;
+            return color;
+        }
+
+        function addApplication(application) {
+            const { userId, name, jobTitle, latitude, longitude } = application;
             if (!markers[userId]) {
-                markers[userId] = L.marker([latitude, longitude]).addTo(map)
-                    .bindPopup(`User: ${userId}<br>Job: ${jobTitle}`);
+                const color = getMarkerColor();
+                const markerHtmlStyles = `
+                    background-color: ${color};
+                    width: 2rem;
+                    height: 2rem;
+                    display: block;
+                    left: -1rem;
+                    top: -1rem;
+                    position: relative;
+                    border-radius: 2rem 2rem 0;
+                    transform: rotate(45deg);
+                    border: 1px solid #FFFFFF`;
+
+                const icon = L.divIcon({
+                    className: "my-custom-pin",
+                    iconAnchor: [0, 24],
+                    labelAnchor: [-6, 0],
+                    popupAnchor: [0, -36],
+                    html: `<span style="${markerHtmlStyles}" />`
+                });
+
+                markers[userId] = L.marker([latitude, longitude], { icon: icon }).addTo(map)
+                    .bindPopup(`<b>${name}</b><br>${jobTitle}`);
+                markers[userId].application = application;
+                markers[userId].color = color;
+                updateMapLegend();
             } else {
                 markers[userId].setLatLng([latitude, longitude]);
-                markers[userId].getPopup().setContent(`User: ${userId}<br>Job: ${jobTitle}`);
+                markers[userId].getPopup().setContent(`<b>${name}</b><br>${jobTitle}`);
+                markers[userId].application = application;
             }
             map.setView([latitude, longitude], 13);
             updateApplicationList();
+        }
+
+        function updateMapLegend() {
+            const legendDiv = document.getElementById('mapLegend');
+            legendDiv.innerHTML = '';
+            for (const userId in markers) {
+                const marker = markers[userId];
+                const legendItem = document.createElement('div');
+                legendItem.className = 'flex items-center';
+                legendItem.innerHTML = `
+                    <span class="w-4 h-4 mr-2 rounded-full" style="background-color: ${marker.color};"></span>
+                    <span class="text-sm">${marker.application.name}</span>
+                `;
+                legendDiv.appendChild(legendItem);
+            }
         }
 
         function updateApplicationList() {
             const listDiv = document.getElementById('applicationList');
             listDiv.innerHTML = '';
             for (const userId in markers) {
-                const marker = markers[userId];
-                const { lat, lng } = marker.getLatLng();
-                const popupContent = marker.getPopup().getContent();
-                const jobTitle = popupContent.split('<br>')[1].split(': ')[1];
+                const application = markers[userId].application;
                 listDiv.innerHTML += `
-                    <div class="bg-gray-50 p-4 rounded-lg">
-                        <p class="font-semibold">${jobTitle}</p>
-                        <p class="text-sm text-gray-600">User ID: ${userId}</p>
-                        <p class="text-sm text-gray-600">Location: ${lat.toFixed(6)}, ${lng.toFixed(6)}</p>
+                    <div class="bg-gray-50 p-4 rounded-lg border-l-4" style="border-color: ${markers[userId].color};">
+                        <p class="font-semibold">${application.name} - ${application.jobTitle}</p>
+                        <p class="text-sm text-gray-600">Email: ${application.email}</p>
+                        <p class="text-sm text-gray-600">Phone: ${application.phone}</p>
+                        <p class="text-sm text-gray-600">Experience: ${application.experience} years</p>
+                        <p class="text-sm text-gray-600">Message: ${application.message}</p>
+                        <p class="text-sm text-gray-600">Location: ${application.latitude.toFixed(6)}, ${application.longitude.toFixed(6)}</p>
                     </div>
                 `;
             }
@@ -96,7 +146,7 @@
             ws.onmessage = (event) => {
                 const data = JSON.parse(event.data);
                 if (data.type === 'application') {
-                    addApplication(data.userId, data.jobTitle, data.latitude, data.longitude);
+                    addApplication(data);
                 }
             };
 

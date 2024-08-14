@@ -37,7 +37,7 @@
                     <li>Proficiency in React, Node.js, and SQL/NoSQL databases</li>
                     <li>Strong problem-solving skills and attention to detail</li>
                 </ul>
-                <button onclick="applyForJob('Full Stack Developer')"
+                <button onclick="showApplicationForm('Full Stack Developer')"
                     class="bg-indigo-600 text-white py-2 px-4 rounded hover:bg-indigo-700 transition duration-300">Apply
                     Now</button>
             </div>
@@ -50,13 +50,55 @@
                     <li>Proficiency in Figma, Sketch, and Adobe Creative Suite</li>
                     <li>Strong portfolio demonstrating user-centered design process</li>
                 </ul>
-                <button onclick="applyForJob('UX Designer')"
+                <button onclick="showApplicationForm('UX Designer')"
                     class="bg-indigo-600 text-white py-2 px-4 rounded hover:bg-indigo-700 transition duration-300">Apply
                     Now</button>
             </div>
         </div>
         <div id="applicationStatus" class="mt-8 text-center font-semibold text-lg"></div>
     </main>
+
+    <!-- Application Form Modal -->
+    <div id="applicationModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center">
+        <div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
+            <h2 id="formJobTitle" class="text-2xl font-bold mb-4"></h2>
+            <form id="applicationForm" class="space-y-4">
+                <div>
+                    <label for="name" class="block text-sm font-medium text-gray-700">Full Name</label>
+                    <input type="text" id="name" name="name" required
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                </div>
+                <div>
+                    <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
+                    <input type="email" id="email" name="email" required
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                </div>
+                <div>
+                    <label for="phone" class="block text-sm font-medium text-gray-700">Phone</label>
+                    <input type="tel" id="phone" name="phone" required
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                </div>
+                <div>
+                    <label for="experience" class="block text-sm font-medium text-gray-700">Years of Experience</label>
+                    <input type="number" id="experience" name="experience" required
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                </div>
+                <div>
+                    <label for="message" class="block text-sm font-medium text-gray-700">Why do you want to join our
+                        team?</label>
+                    <textarea id="message" name="message" rows="3" required
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"></textarea>
+                </div>
+                <div class="flex justify-end space-x-2">
+                    <button type="button" onclick="hideApplicationForm()"
+                        class="bg-gray-300 text-gray-700 py-2 px-4 rounded hover:bg-gray-400 transition duration-300">Cancel</button>
+                    <button type="submit"
+                        class="bg-indigo-600 text-white py-2 px-4 rounded hover:bg-indigo-700 transition duration-300">Submit
+                        Application</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <footer class="bg-gray-800 text-white py-6">
         <div class="container mx-auto px-6 text-center">
@@ -67,6 +109,7 @@
     <script>
         const userId = uuid.v4();
         let ws;
+        let currentJobTitle = '';
 
         function initWebSocket() {
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -80,11 +123,24 @@
             ws.onerror = (error) => console.error('WebSocket error:', error);
         }
 
-        function applyForJob(jobTitle) {
+        function showApplicationForm(jobTitle) {
+            currentJobTitle = jobTitle;
+            document.getElementById('formJobTitle').textContent = `Apply for ${jobTitle}`;
+            document.getElementById('applicationModal').classList.remove('hidden');
+            document.getElementById('applicationModal').classList.add('flex');
+        }
+
+        function hideApplicationForm() {
+            document.getElementById('applicationModal').classList.add('hidden');
+            document.getElementById('applicationModal').classList.remove('flex');
+        }
+
+        document.getElementById('applicationForm').addEventListener('submit', function (e) {
+            e.preventDefault();
             if ("geolocation" in navigator) {
-                document.getElementById('applicationStatus').textContent = "Applying your application...";
+                document.getElementById('applicationStatus').textContent = "Submitting application...";
                 navigator.geolocation.getCurrentPosition(
-                    (position) => sendApplication(jobTitle, position),
+                    (position) => sendApplication(position),
                     (error) => {
                         console.error('Geolocation error:', error);
                         document.getElementById('applicationStatus').textContent = "Unable to get location. Please ensure location services are enabled and try again.";
@@ -94,13 +150,28 @@
             } else {
                 document.getElementById('applicationStatus').textContent = "Geolocation is not supported by this browser.";
             }
-        }
+        });
 
-        function sendApplication(jobTitle, position) {
+        function sendApplication(position) {
             const { latitude, longitude } = position.coords;
+            const formData = new FormData(document.getElementById('applicationForm'));
+            const applicationData = {
+                type: 'application',
+                userId,
+                jobTitle: currentJobTitle,
+                name: formData.get('name'),
+                email: formData.get('email'),
+                phone: formData.get('phone'),
+                experience: formData.get('experience'),
+                message: formData.get('message'),
+                latitude,
+                longitude
+            };
+
             if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({ type: 'application', userId, jobTitle, latitude, longitude }));
-                document.getElementById('applicationStatus').textContent = `Application for ${jobTitle} submitted successfully!`;
+                ws.send(JSON.stringify(applicationData));
+                document.getElementById('applicationStatus').textContent = `Application for ${currentJobTitle} submitted successfully!`;
+                hideApplicationForm();
             } else {
                 document.getElementById('applicationStatus').textContent = "Unable to submit application. Please try again later.";
             }

@@ -62,7 +62,8 @@
         }
 
         function initWebSocket() {
-            const wsUrl = `ws://${window.location.host}/admin`;
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/admin`;
             const ws = new WebSocket(wsUrl);
 
             ws.onopen = () => console.log('WebSocket connected');

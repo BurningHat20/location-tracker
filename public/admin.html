@@ -4,30 +4,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin - Location Viewer</title>
+    <title>TechInnovate - Admin Dashboard</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.css" />
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            padding: 20px;
-        }
-
-        #map {
-            height: 500px;
-            width: 100%;
-        }
-
-        #userList {
-            margin-top: 20px;
-        }
-    </style>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
-<body>
-    <h1>Admin - Location Viewer</h1>
-    <div id="map"></div>
-    <div id="userList"></div>
+<body class="bg-gray-100 font-sans">
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <div class="bg-indigo-800 text-white w-64 flex-shrink-0 p-4">
+            <h1 class="text-2xl font-bold mb-6">TechInnovate Admin</h1>
+            <nav>
+                <a href="#" class="block py-2 px-4 rounded hover:bg-indigo-700">Dashboard</a>
+                <a href="#" class="block py-2 px-4 rounded hover:bg-indigo-700">Applications</a>
+                <a href="#" class="block py-2 px-4 rounded hover:bg-indigo-700">Job Listings</a>
+                <a href="#" class="block py-2 px-4 rounded hover:bg-indigo-700">Settings</a>
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 overflow-auto">
+            <header class="bg-white shadow">
+                <div class="py-6 px-4 sm:px-6 lg:px-8">
+                    <h2 class="text-3xl font-bold text-gray-900">Application Viewer</h2>
+                </div>
+            </header>
+
+            <main class="p-6">
+                <div class="bg-white rounded-lg shadow p-6 mb-6">
+                    <h3 class="text-xl font-semibold mb-4">Application Map</h3>
+                    <div id="map" class="h-96 w-full"></div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-xl font-semibold mb-4">Recent Applications</h3>
+                    <div id="applicationList" class="space-y-4"></div>
+                </div>
+            </main>
+        </div>
+    </div>
 
     <script>
         let map;
@@ -40,24 +56,33 @@
             }).addTo(map);
         }
 
-        function updateUserLocation(userId, latitude, longitude) {
+        function addApplication(userId, jobTitle, latitude, longitude) {
             if (!markers[userId]) {
                 markers[userId] = L.marker([latitude, longitude]).addTo(map)
-                    .bindPopup(`User: ${userId}`);
+                    .bindPopup(`User: ${userId}<br>Job: ${jobTitle}`);
             } else {
                 markers[userId].setLatLng([latitude, longitude]);
+                markers[userId].getPopup().setContent(`User: ${userId}<br>Job: ${jobTitle}`);
             }
             map.setView([latitude, longitude], 13);
-            updateUserList();
+            updateApplicationList();
         }
 
-        function updateUserList() {
-            const userListDiv = document.getElementById('userList');
-            userListDiv.innerHTML = '<h2>Connected Users</h2>';
+        function updateApplicationList() {
+            const listDiv = document.getElementById('applicationList');
+            listDiv.innerHTML = '';
             for (const userId in markers) {
                 const marker = markers[userId];
                 const { lat, lng } = marker.getLatLng();
-                userListDiv.innerHTML += `<p>User ${userId}: Lat ${lat.toFixed(6)}, Lng ${lng.toFixed(6)}</p>`;
+                const popupContent = marker.getPopup().getContent();
+                const jobTitle = popupContent.split('<br>')[1].split(': ')[1];
+                listDiv.innerHTML += `
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <p class="font-semibold">${jobTitle}</p>
+                        <p class="text-sm text-gray-600">User ID: ${userId}</p>
+                        <p class="text-sm text-gray-600">Location: ${lat.toFixed(6)}, ${lng.toFixed(6)}</p>
+                    </div>
+                `;
             }
         }
 
@@ -70,8 +95,8 @@
 
             ws.onmessage = (event) => {
                 const data = JSON.parse(event.data);
-                if (data.type === 'location') {
-                    updateUserLocation(data.userId, data.latitude, data.longitude);
+                if (data.type === 'application') {
+                    addApplication(data.userId, data.jobTitle, data.latitude, data.longitude);
                 }
             };
 

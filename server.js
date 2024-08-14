@@ -36,11 +36,11 @@ wss.on("connection", (ws, req) => {
   ws.on("message", (message) => {
     try {
       const data = JSON.parse(message);
-      if (data.type === "location") {
+      if (data.type === "application") {
         console.log(
-          `Received location from ${data.userId}: Latitude ${data.latitude}, Longitude ${data.longitude}`
+          `Received application from ${data.userId} for ${data.jobTitle}: Latitude ${data.latitude}, Longitude ${data.longitude}`
         );
-        // Broadcast the location to all connected admin clients
+        // Broadcast the application to all connected admin clients
         adminClients.forEach((client) => {
           if (client.readyState === WebSocket.OPEN) {
             client.send(JSON.stringify(data));

@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Location Tracker</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/uuid/8.3.2/uuid.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+
+        #status {
+            margin: 20px 0;
+            font-weight: bold;
+        }
+
+        #map {
+            height: 300px;
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Location Tracker</h1>
+    <div id="status">Requesting location permission...</div>
+    <div id="map"></div>
+
+    <script>
+        const userId = uuid.v4();
+        let ws;
+        let watchId;
+
+        function initWebSocket() {
+            ws = new WebSocket(`ws://${location.host}`);
+            ws.onopen = () => console.log('WebSocket connected');
+            ws.onclose = () => {
+                console.log('WebSocket disconnected. Attempting to reconnect...');
+                setTimeout(initWebSocket, 5000);
+            };
+            ws.onerror = (error) => console.error('WebSocket error:', error);
+        }
+
+        function sendLocation(position) {
+            const { latitude, longitude } = position.coords;
+            document.getElementById('status').textContent = `Location: ${latitude}, ${longitude}`;
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'location', userId, latitude, longitude }));
+            }
+            updateMap(latitude, longitude);
+        }
+
+        function handleError(error) {
+            console.error('Error:', error);
+            document.getElementById('status').textContent = `Error: ${error.message}`;
+        }
+
+        function updateMap(lat, lng) {
+            const mapDiv = document.getElementById('map');
+            mapDiv.innerHTML = `<img src="https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=13&size=600x300&maptype=roadmap&markers=color:red%7C${lat},${lng}&key=AIzaSyAOAdBvliNx-HbE8Ta3L0C6SPj7ehvn-JU" alt="Map">`;
+        }
+
+        initWebSocket();
+
+        if ("geolocation" in navigator) {
+            watchId = navigator.geolocation.watchPosition(sendLocation, handleError, {
+                enableHighAccuracy: true,
+                timeout: 5000,
+                maximumAge: 0
+            });
+        } else {
+            document.getElementById('status').textContent = "Geolocation is not supported by this browser.";
+        }
+
+        window.addEventListener('beforeunload', () => {
+            if (watchId !== undefined) {
+                navigator.geolocation.clearWatch(watchId);
+            }
+            if (ws) {
+                ws.close();
+            }
+        });
+    </script>
+</body>
+
+</html>
